@@ -1,9 +1,7 @@
-#!/usr/bin/env node
-
 /**
  * @auth {{author}}
  * @date {{dateTime}}
- * @desc
+ * @desc 清理爬虫相关数据
  */
 const program   = require('commander');
 const path      = require('path');
@@ -21,9 +19,9 @@ const info      = chalk.bold.dim.green;
 program
 	.version('0.1.0')
 	.usage('清理数据爬虫相关')
-	.option('-a,--all [value]', '清理所有爬虫数据（包括过滤器数据）')
-	.option('-f,--filter [value]', '清理过滤器数据')
-	.option('-s,--schedule [value]', '清理调度中间数据')
+	.option('-a,--all', '清理所有爬虫数据（包括过滤器数据）')
+	.option('-f,--filter', '清理过滤器数据')
+	.option('-s,--schedule', '清理调度中间数据')
 	.action(async () => {
 		let {all, filter, schedule} = program;
 

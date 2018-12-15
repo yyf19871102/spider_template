@@ -4,5 +4,12 @@
  * @desc
  */
 const fetcher = require('./fetcher');
+const fs = require('fs');
 
-fetcher.getAnnCount().then(console.log);
+fetcher.getAnnCount().then(data => {
+    console.log(JSON.stringify(data, null, 4))
+});
+
+// fetcher.getNaviData(1, 1, 1000).then(data => {
+//     fs.writeFileSync('d://getNaviData.json', JSON.stringify(data, null, 4));
+// });

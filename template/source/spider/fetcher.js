@@ -1,6 +1,6 @@
 /**
- * @auth {{author}}
- * @date {{dateTime}}
+ * @author yangyufei
+ * @date 2018-12-15 10:22:16
  * @desc
  */
 const cheerio           = require('cheerio');
@@ -17,7 +17,7 @@ exports.getAnnCount = async () => {
 	let reqConf = {
 		uri     : 'http://sbgg.saic.gov.cn:9080/tmann/annInfoView/homePage.html',
 		method  : 'GET',
-		// useProxy: true,
+		useProxy: true,
 		timeout,
 		transform: res => cheerio.load(res),
 	};
@@ -46,7 +46,7 @@ exports.getAnnCount = async () => {
  * @param page
  * @returns {Promise<*|void>}
  */
-exports.getNaviData = async (ann, page) => {
+exports.getNaviData = async (ann, page, rows) => {
 	let reqConf = {
 		uri     : 'http://sbgg.saic.gov.cn:9080/tmann/annInfoView/annSearchDG.html',
 		method  : 'POST',
@@ -54,11 +54,17 @@ exports.getNaviData = async (ann, page) => {
 		timeout,
 		form    : {
 			page,
-			rows: SysConf.SPIDER.navi_page_size,
+			rows,
 			annNum: ann
 		},
 		json    : true,
 	};
 
-	return await requestUrl(reqConf, 5, res => res.hasOwnProperty('rows'));
+	let data = await requestUrl(reqConf, 5, res => res.hasOwnProperty('rows'));
+
+	data.rows.forEach(record => {
+	    record.uri = `http://sbgg.saic.gov.cn:9080/tmann/annInfoView/annSearch.html?annNum=${ann}`;
+    });
+
+	return data;
 };

@@ -1,7 +1,7 @@
 /**
  * @auth {{author}}
  * @date {{dateTime}}
- * @desc
+ * @desc 启动爬虫启动
  */
 const schedule      = require('node-schedule');
 
@@ -10,7 +10,6 @@ const SysConf       = require('./config');
 
 const run = async () => {
 	let spider = await dispatcher.get();
-	await spider.init();
 	await spider.run();
 	await spider.clear();
 };

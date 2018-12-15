@@ -2,15 +2,22 @@
  * @auth {{author}}
  * @date {{dateTime}}
  * @desc 配置文件
+ *
+ * //TODO 根据项目配置相关选项
  */
 const _     = require('lodash');
 const fs    = require('fs');
 const path  = require('path');
 
+const dateFormat = require('../common/date_format');
+
 const ENV   = process.env.NODE_ENV || 'development';
 
 let config = {
 	NAME        : '{{project}}', // 工程名同
+    SITE_NAME   : '', // 主站中文名称
+
+	MONITOR     : true, // 默认加入监控当中
 
 	// 信源配置，每个信源对应一个接口/out文件
 	XINYUAN     : {
@@ -27,18 +34,18 @@ let config = {
 			schema  : {
 				type: 'object',
 				properties  : {
-					ann_date: {type: 'string', maxLength: 50},
-					ann_num : {type: 'integer'},
-					ann_type: {type: 'string', maxLength: 50},
-					createdAt: {type: 'string'},
-					id      : {type: 'string', maxLength: 50},
-					reg_name: {type: 'string', maxLength: 50},
-					reg_num : {type: 'string', maxLength: 50},
-					site    : {type: 'string', maxLength: 50},
-					siteName: {type: 'string', maxLength: 50},
-					tm_name : {type: 'string', maxLength: 50},
-					type    : {type: 'string', maxLength: 50},
-					uri     : {type: 'string', maxLength: 50},
+					ann_date: {type: 'string', maxLength: 50}, // 公告日期
+					ann_num : {type: 'integer'}, // 公告期号
+					ann_type: {type: 'string', maxLength: 50}, // 公告类型
+					createdAt: {type: 'string', _default: dateFormat.getDate}, // 抓取时间
+					id      : {type: 'string', maxLength: 50}, // 公告ID
+					reg_name: {type: 'string', maxLength: 50}, // 申请人
+					reg_num : {type: 'string', maxLength: 50}, // 商标ID
+					site    : {type: 'string', maxLength: 50, _default: 'http://sbgg.saic.gov.cn:9080/tmann/annInfoView/homePage.html'}, // 网站标识
+					siteName: {type: 'string', maxLength: 50, _default: '中国商标网'}, // 网站名称
+					tm_name : {type: 'string', maxLength: 50}, // 商标名称
+					type    : {type: 'string', maxLength: 50, _default: '商标注册'}, // 信源类型
+					uri     : {type: 'string', maxLength: 50}, // uri地址
 				},
 				required    : ['id', 'ann_num']
 			},
@@ -81,10 +88,9 @@ let config = {
 
 	// 网络监控相关keys
 	NET_MONITOR_KEYS: {
-		STATE_NET   : 'network:base:state', // 当前网络基本状态
-		NET_LAST_TEST: 'network:base:last-test-time', // 上次检查网络状态时间
-		STATE_PROXY : 'network:proxy-state', // 当前代理源状态
-		POOL        : 'network:proxy-pool', // 代理池
+		STATE_NET   : 'network:connect:state', // 当前网络基本状态
+		NET_LAST_TEST: 'network:connect:lastTestTime', // 上次检查网络状态时间
+		POOL        : 'network:proxy:pool', // 代理池
 	},
 
 	// 网络状态
@@ -120,5 +126,15 @@ fs.readdirSync(__dirname).forEach(fileName => {
 		config.hasOwnProperty(key) ? _.merge(config[key], value) : (config[key] = value);
 	}
 });
+
+/**
+ * 开发环境中需要实时监控网络状态；
+ * 生产环境中可以保证网络稳定，因此不需要开启此功能；
+ * @type {boolean}
+ */
+config.NET_CONNECT_TEST = ENV === 'development';
+
+// 生产环境中禁止自定义的test选项
+ENV === 'production' && config.SPIDER && config.SPIDER.test && (delete config.SPIDER.test);
 
 module.exports = config;

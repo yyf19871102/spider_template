@@ -23,7 +23,7 @@ class Phase {
 		this.progress = null; // 进度显示封装
 		this.mode = mode || 'run';
 
-		let prefix = `spider-${utils.makeNameSpace()}:phase${this.no}@${phaseName}`;
+		let prefix = `${utils.makeNameSpace()}:phase${this.no}@${phaseName}`;
 		this.KEYS = {
 			DATA_LIST   : `${prefix}:data`,
 			READY_SET   : `${prefix}:ready`,
@@ -188,6 +188,7 @@ class Phase {
 
 				await this.completeOneTask(index);
 			} catch (err) {
+				console.error(err);
 				await this.setError(index);
 			}
 		}

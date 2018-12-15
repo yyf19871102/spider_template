@@ -56,9 +56,25 @@ class Output {
 		// 校验
 		if (this.validator(record)) return null;
 
+		let result = {};
+		_.keys(this.xinyuan.schema.properties).forEach(key => {
+		    result[key] = record.hasOwnProperty(key) ? result[key] : '';
+		    if (record.hasOwnProperty(key)) {
+                result[key] = record[key];
+            } else if (this.xinyuan.schema.properties[key].hasOwnProperty('_default')) {
+                if (typeof this.xinyuan.schema.properties[key]._default === 'function') {
+                    result[key] = this.xinyuan.schema.properties[key]._default();
+                } else {
+                    result[key] = this.xinyuan.schema.properties[key]._default;
+                }
+            } else {
+                result[key] = '';
+            }
+        });
+
 		// 排序
-		this.xinyuan.sort && (this.xinyuan.sort === 'asc' || this.xinyuan.sort === 'desc') && (record = tools.sortObj(record, this.xinyuan.sort));
-		return tools.spread(record) + '#\r\n';
+		this.xinyuan.sort && (this.xinyuan.sort === 'asc' || this.xinyuan.sort === 'desc') && (result = tools.sortObj(result, this.xinyuan.sort));
+		return tools.spread(result) + '#\r\n';
 	}
 
 	/**
@@ -97,7 +113,7 @@ class Output {
 	async write(dataList) {
 		for (let record of dataList) {
 			let str = this.validate(record);
-			str && await redis.sadd(str);
+			str && await redis.sadd(this.KEYS.OUTPUT, str);
 		}
 
 

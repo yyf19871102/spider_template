@@ -46,7 +46,10 @@ class Task {
 		}
 
 		// 清除所有output中残留的数据
-		for (let output in this.context.outputManager) await output.clear();
+		for (let outputKey in this.context.outputManager) {
+			let output = this.context.outputManager[outputKey];
+            await output.clear();
+		}
 	}
 
 	/**

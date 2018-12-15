@@ -4,9 +4,7 @@
  * @desc 爬虫相关配置
  */
 module.exports = {
-	out     : {
-		namePrefix  : '{{project}}', // 输出文件名前缀
-	},
+    outDir  : '/wltx/home/', // 输出文件根路径
 
 	fetch   : {
 		timeout     : 20000,
