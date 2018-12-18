@@ -14,10 +14,19 @@ const run = async () => {
 	await spider.clear();
 };
 
+const forever = async () => {
+    while(true) {
+        await run;
+        await Promise.delay(10 * 60 * 1000);
+    }
+};
+
 if (SysConf.SPIDER.run.type === 'once') {
 	run();
 } else if (SysConf.SPIDER.run.type === 'cron') {
 	schedule.scheduleJob(SysConf.SPIDER.run.cron, run);
+} else if (SysConf.SPIDER.run.type === 'forever') {
+    forever();
 } else {
 	logger.warn(`错误的run type选项：${SysConf.SPIDER.run.type}`);
 }

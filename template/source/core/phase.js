@@ -213,7 +213,7 @@ class Phase {
 			this.progress = new Progress(total, successCount, failCount);
 
 			let ps = [];
-			for (let i = 0 ; i < SysConf.SPIDER.task.concurrency; i++) {
+			for (let i = 0 ; i < this.concurrency; i++) {
 				ps.push(this._microTask());
 			}
 
@@ -231,8 +231,8 @@ class Phase {
  * @param handler 任务处理方法
  * @return {Promise.<Phase>}
  */
-exports.getOnePhase = async (phaseName, no, handler) => {
-	let phase = new Phase(phaseName, no, handler);
+exports.getOnePhase = async (phaseName, no, handler, maxErrCount, concurrency) => {
+	let phase = new Phase(phaseName, no, handler, maxErrCount, concurrency);
 
 	await phase.init();
 

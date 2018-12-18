@@ -93,7 +93,7 @@ class Dispatcher {
 			await redis.set(this.KEYS.INDEX, index);
 			let seed = JSON.parse(await redis.lindex(this.KEYS.DATA_LIST, index));
 
-			logger.info(`【总进度 ${index + 1}/${len}】：${((index + 1) / len * 100).toFixed(2)}%`);
+			logger.info(`【总进度 ${index + 1}/${len}】：${((index + 1) / len * 100).toFixed(2)}%；==> ${JSON.stringify(seed)}`);
 
 			let task = await taskManager.get(seed, this.context);
 			await task.init();

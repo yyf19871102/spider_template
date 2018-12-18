@@ -29,7 +29,7 @@ class Output {
 
 		let prefix =  utils.makeNameSpace();
 		this.KEYS = {
-			OUTPUT  : `${prefix}:output-${xinyuan}:result`,
+			OUTPUT  : `${prefix}:output-${xinyuan.key}:result`,
 		};
 
 		this.destDir = null; // out文件根目录
