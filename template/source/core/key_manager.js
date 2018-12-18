@@ -35,7 +35,7 @@ class KeyManager {
 	async clearAllKeys() {
 		let keyList = await redis.smembers(this.namespace);
 
-		for (let key of keyList) await redis.del(this.namespace, key);
+		for (let key of keyList) await redis.del(key);
 
 		await redis.del(this.namespace);
 	}
