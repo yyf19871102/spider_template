@@ -102,7 +102,7 @@ class Output {
 			if (await redis.scard(this.KEYS.OUTPUT) <= 0) break;
 			outStr += await redis.spop(this.KEYS.OUTPUT);
 		}
-		fs.appendFileSync(destFile, outStr);
+		outStr && fs.appendFileSync(destFile, outStr);
 	}
 
 	/**
