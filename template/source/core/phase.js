@@ -81,7 +81,6 @@ class Phase {
 	 * @return {Promise<void>}
 	 */
 	async over() {
-		for (let key in this.KEYS) await redis.del(this.KEYS[key]);
 		await redis.set(this.KEYS.OVER_FLAG, 1);
 	}
 
@@ -120,6 +119,7 @@ class Phase {
 	async completeOneTask(index, success = true) {
 		let key = success ? this.KEYS.SUCCESS_SET : this.KEYS.FAILED_SET;
 		await redis.sadd(key, index);
+		await redis.zrem(this.KEYS.ERROR_SET, index);
 
 		this.progress.success();
 	}
