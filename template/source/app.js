@@ -16,7 +16,7 @@ const run = async () => {
 
 const forever = async () => {
     while(true) {
-        await run;
+        await run();
         await Promise.delay(10 * 60 * 1000);
     }
 };
