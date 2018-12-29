@@ -4,6 +4,7 @@
  * @desc 启动爬虫启动
  */
 const schedule      = require('node-schedule');
+const Promise       = require('bluebird');
 
 const dispatcher    = require('./core/dispatcher');
 const SysConf       = require('./config');

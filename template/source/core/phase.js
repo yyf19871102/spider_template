@@ -133,14 +133,7 @@ class Phase {
 		if (taskList.length < 1) return;
 
 		let list = taskList.map(task => JSON.stringify(task));
-		let startIndex = await redis.llen(this.KEYS.DATA_LIST);
-
 		await redis.lpush(this.KEYS.DATA_LIST, list);
-
-		// 生成索引
-		for (let no = 0; no < taskList.length; no++) {
-			await redis.sadd(this.KEYS.READY_SET, startIndex + no);
-		}
 	}
 
 	/**
@@ -208,6 +201,15 @@ class Phase {
 			let total = await redis.llen(this.KEYS.DATA_LIST);
 			let successCount = await redis.scard(this.KEYS.SUCCESS_SET);
 			let failCount = await redis.scard(this.KEYS.FAILED_SET);
+
+            for (let index = 0; index < total; index++) {
+                let inSuccessSet = await redis.sismember(this.KEYS.SUCCESS_SET, index);
+                let inFailedSet = await redis.sismember(this.KEYS.FAILED_SET, index);
+
+                if (!inSuccessSet && !inFailedSet) {
+                    await redis.sadd(this.KEYS.READY_SET, index);
+                }
+            }
 
 			// 生成进度信息
 			this.progress = new Progress(total, successCount, failCount);
