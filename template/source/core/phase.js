@@ -12,18 +12,21 @@ const {Progress}    = require('../common/tools');
 const keyManager    = require('./key_manager');
 const logger        = require('../common/logger');
 const utils         = require('./utils');
+const dispatcher    = require('./dispatcher');
 
 class Phase {
-	constructor(phaseName, no, handler, maxErrCount, concurrency, mode) {
+	constructor(sid, phaseName, no, handler, maxErrCount, concurrency) {
+	    this.sid = sid;
 		this.no = no || 1; // 该phase的索引，仅仅用于标识
 		this.phaseName = phaseName;
 		this.maxErrCount = maxErrCount || 4; // 最大重试次数
 		this.handler = handler; // 每个任务的处理方法
 		this.concurrency = concurrency || SysConf.SPIDER.task.concurrency; // 并发数量
-		this.progress = null; // 进度显示封装
-		this.mode = mode || 'run';
+        this.keyword = '';
 
-		let prefix = `${utils.makeNameSpace()}:phase${this.no}@${phaseName}`;
+		this.progress = null; // 进度显示封装
+
+		let prefix = `${utils.makeNameSpace()}:sid-${sid}:phase${this.no}@${phaseName}`;
 		this.KEYS = {
 			DATA_LIST   : `${prefix}:data`,
 			READY_SET   : `${prefix}:ready`,
@@ -68,6 +71,23 @@ class Phase {
 		this.handler = handler;
 	}
 
+    /**
+     * 设置打印日志中当前执行的seed的关键字
+     * @param keyword
+     */
+	setKeyword(keyword) {
+	    this.keyword = keyword;
+    }
+
+    /**
+     * 读取seed，只有第一个phase可以调用次方法！
+     * @returns {Promise<any>}
+     */
+    async getSeed() {
+	    let seed = await redis.lindex(this.KEYS.DATA_LIST, 0);
+	    return JSON.parse(seed);
+    }
+
 	/**
 	 * 判断该任务是否已经创建过了
 	 * @return {Promise.<boolean>}
@@ -76,13 +96,6 @@ class Phase {
 		return await redis.llen(this.KEYS.DATA_LIST);
 	}
 
-	/**
-	 * 清除中间任务数据并将设置结束标志
-	 * @return {Promise<void>}
-	 */
-	async over() {
-		await redis.set(this.KEYS.OVER_FLAG, 1);
-	}
 
 	/**
 	 * 删除任务所有数据
@@ -181,7 +194,7 @@ class Phase {
 
 				await this.completeOneTask(index);
 			} catch (err) {
-				console.error(err);
+				// console.error(err);
 				await this.setError(index);
 			}
 		}
@@ -196,12 +209,13 @@ class Phase {
 	async run() {
 		// 如果该阶段执行结束，则跳过run
 		if (!await redis.exists(this.KEYS.OVER_FLAG)) {
-			logger.info(`${this.no}.开始执行 ${this.phaseName} 阶段...`);
+			// logger.info(`${this.no}.开始执行 ${this.phaseName} 阶段...`);
 
 			let total = await redis.llen(this.KEYS.DATA_LIST);
 			let successCount = await redis.scard(this.KEYS.SUCCESS_SET);
 			let failCount = await redis.scard(this.KEYS.FAILED_SET);
 
+			// 每次开始运行前重新整理index
             for (let index = 0; index < total; index++) {
                 let inSuccessSet = await redis.sismember(this.KEYS.SUCCESS_SET, index);
                 let inFailedSet = await redis.sismember(this.KEYS.FAILED_SET, index);
@@ -211,8 +225,10 @@ class Phase {
                 }
             }
 
+            let {totalTaskNum, overTaskNum} = await dispatcher.getProgressInfo();
+            let prefix = `[总进度 ${overTaskNum}/${totalTaskNum}：${(overTaskNum / totalTaskNum * 100).toFixed(2)}%；==> ${this.keyword}][sid-${this.sid}][phase-${this.no}:${this.phaseName}]`;
 			// 生成进度信息
-			this.progress = new Progress(total, successCount, failCount);
+			this.progress = new Progress(total, successCount, failCount, undefined, prefix);
 
 			let ps = [];
 			for (let i = 0 ; i < this.concurrency; i++) {
@@ -222,7 +238,8 @@ class Phase {
 			await Promise.all(ps);
 		}
 
-		await this.over();
+		// 阶段结束，则设置over标志，但不清理中间数据；中间数据由taskManager清理
+        await redis.set(this.KEYS.OVER_FLAG, 1);
 	}
 }
 
@@ -233,8 +250,8 @@ class Phase {
  * @param handler 任务处理方法
  * @return {Promise.<Phase>}
  */
-exports.getOnePhase = async (phaseName, no, handler, maxErrCount, concurrency) => {
-	let phase = new Phase(phaseName, no, handler, maxErrCount, concurrency);
+exports.getOnePhase = async (sid, phaseName, no, handler, maxErrCount, concurrency) => {
+	let phase = new Phase(sid, phaseName, no, handler, maxErrCount, concurrency);
 
 	await phase.init();
 

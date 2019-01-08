@@ -4,13 +4,17 @@
  * @desc 爬虫相关配置
  */
 module.exports = {
-	outDir  : 'd://tmp/', // 输出文件根路径
+	outDir  : 'e://tmp/', // 输出文件根路径
+
+    threadNum: 4, // 开启线程数量
+
+    keywordOfSeed: 'name', // 打印日志时，显示当前执行的seed的关键字段
 
 	/**
 	 * 默认的输出文件夹为：outDir/SysConf.NAME；
 	 * 但是如果dirName属性存在,则输出文件夹为：outDir/dirName；
 	 */
-	// dirName : 'sbgg_ext',
+	// dirName : 'lagou_ext',
 
     // 请求接口相关配置项
 	fetch   : {
@@ -24,12 +28,13 @@ module.exports = {
 		retry       : 5, // 任务错误重试次数
 	},
 
-	// 测试选项，自定义；在production环境中该选项不起作用；
-	test    : {
-		enable  : true,
-		annNum  : 1,
-		endPage : 2,
-	},
+	// 测试选项，自定义；
+    // test: [
+     //    {code : '130', name: '莆田'},
+     //    {code : '53', name: '盘锦'},
+     //    {code: '175', name: '濮阳'},
+     //    {code: '170', name: '平顶山'},
+    // ],
 
     /**
      * 运行方式，共3种，分别是

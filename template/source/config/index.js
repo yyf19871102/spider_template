@@ -8,25 +8,26 @@
 const _     = require('lodash');
 const fs    = require('fs');
 const path  = require('path');
+const uuid  = require('uuid/v4');
 
 const dateFormat = require('../common/date_format');
 
 const ENV   = process.env.NODE_ENV || 'development';
 
 let config = {
-	NAME        : '{{project}}', // 工程名同
-    SITE_NAME   : '', // 主站中文名称
+	NAME        : 'lagou', // 工程名同
 
 	MONITOR     : true, // 默认加入监控当中
+    SITE_NAME   : '拉勾网', // 主站中文名称，monitor监控时爬虫的名字
 
 	// 信源配置，每个信源对应一个接口/out文件
 	XINYUAN     : {
-		output  : {
+		corpOut : {
 			/**
 			 * out文件名前缀；
 			 * 建议和信源关键字一致
 			 */
-			key     : 'sbgg',
+			key     : 'corp',
 
 			/**
 			 * schema详细使用见 https://github.com/epoberezkin/ajv
@@ -34,42 +35,79 @@ let config = {
 			schema  : {
 				type: 'object',
 				properties  : {
-					ann_date: {type: 'string', maxLength: 50}, // 公告日期
-					ann_num : {type: 'integer'}, // 公告期号
-					ann_type: {type: 'string', maxLength: 50}, // 公告类型
-					createdAt: {type: 'string', _default: dateFormat.getDate}, // 抓取时间
-					id      : {type: 'string', maxLength: 50}, // 公告ID
-					reg_name: {type: 'string', maxLength: 50}, // 申请人
-					reg_num : {type: 'string', maxLength: 50}, // 商标ID
-					site    : {type: 'string', maxLength: 50, _default: 'http://sbgg.saic.gov.cn:9080/tmann/annInfoView/homePage.html'}, // 网站标识
-					siteName: {type: 'string', maxLength: 50, _default: '中国商标网'}, // 网站名称
-					tm_name : {type: 'string', maxLength: 50}, // 商标名称
-					type    : {type: 'string', maxLength: 50, _default: '商标注册'}, // 信源类型
-					uri     : {type: 'string', maxLength: 50}, // uri地址
+                    uuid    : {type: 'string'},
+                    recType : {type: 'string', _default: '招聘'},
+                    theSource: {type: 'string', _default: '拉勾网'},
+                    url     : {type: 'string'},
+                    date    : {type: 'string', _default: dateFormat.getDate},
+                    ffdcreate: {type: 'string'},
+                    title   : {type: 'string'},
+                    recTypeSub: {type: 'string', _default: '拉钩'},
+                    city    : {type: 'string'},
+                    region  : {type: 'string'},
+                    address : {type: 'string'},
+                    lat     : {type: 'string'},
+                    lng     : {type: 'string'},
+                    tags    : {type: 'string'},
+                    industry: {type: 'string'},
+                    companySize: {type: 'string'},
+                    financeStage: {type: 'string'},
+                    name    : {type: 'string'},
+                    companyShortName: {type: 'string'},
+                    homepage: {type: 'string'},
+                    companyIntroduce: {type: 'string'},
+                    desc    : {type: 'string'},
+                    collectionType: {type: 'string'},
 				},
-				required    : ['id', 'ann_num']
+				required    : ['uuid']
 			},
-			sort    : 'asc', // 输出文件是否排序
+			// sort    : 'asc', // 输出文件是否排序
 
 			/**
 			 * 如果subDir存在，则生成一个子目录，子目录里面存放相关out文件
 			 */
-			// subDir  : 'info', // 如果subDir存在，则生成一个子目录，子目录里面存放相关out文件
-		}
+			subDir  : 'company', // 如果subDir存在，则生成一个子目录，子目录里面存放相关out文件
+		},
+
+        jobOut: {
+		    key: 'job',
+            schema: {
+		        type: 'object',
+                properties: {
+                    uuid    : {type: 'string', _default: uuid},
+                    recType : {type: 'string', _default: '招聘'},
+                    theSource: {type: 'string', _default: '拉勾网'},
+                    url     : {type: 'string'},
+                    date    : {type: 'string', _default: dateFormat.getDate},
+                    ffdcreate: {type: 'string'},
+                    title   : {type: 'string'},
+                    recTypeSub: {type: 'string', _default: 'lagou'},
+                    subTitle: {type: 'string'},
+                    title   : {type: 'string'},
+                    salary  : {type: 'string'},
+                    workAt  : {type: 'string'},
+                    workExp : {type: 'string'},
+                    eduLv   : {type: 'string'},
+                    quanzhi : {type: 'string'},
+                    tags    : {type: 'string'},
+                    publishDate: {type: 'string'},
+                    welfare : {type: 'string'},
+                    desc    : {type: 'string'},
+                    workAddr: {type: 'string'},
+                    companyId: {type: 'string'},
+                    jobId   : {type: 'string'},
+                }
+            },
+            subDir  : 'zhiwei',
+        }
 	},
 
 	// 过滤器配置
 	FILTER      : {
-		annFilter   : {
-			name    : 'annNum', // 过滤器名字
-			type    : 1, // 过滤器类型
-		}
-	},
-
-	// TODO 配置抓取网站的基本信息
-	WEBSITE     : {
-		SITENAME: '', // 网站名
-		HOMEPAGE: '', // 网站主页地址
+		// annFilter   : {
+		// 	name    : 'annNum', // 过滤器名字
+		// 	type    : 1, // 过滤器类型
+		// }
 	},
 
 	// 错误相关信息
@@ -113,7 +151,13 @@ let config = {
 	FILTER_TYPE     : {
 		SIMPLE      : 1, // 简单过滤器
 		EXPIRE      : 2, // 带过期的过滤器
-	}
+	},
+
+    // 必须分类细化查询的7个大城市：北京、上海、广州、深圳、成都、武汉、杭州
+    BIG_CITY        : ['2', '3', '215', '213', '6', '252', '184'],
+
+    CORP_PAGE_SIZE  : 16, // 公司导航页每页16条数据
+    JOB_PAGE_SIZE   : 10, // 职位导航页每页10条数据
 };
 
 // 读取config目录下所有配置文件，并合并到system当中
@@ -133,6 +177,7 @@ fs.readdirSync(__dirname).forEach(fileName => {
  * @type {boolean}
  */
 config.NET_CONNECT_TEST = ENV === 'development';
+config.NET_CONNECT_TEST = false;
 
 // 生产环境中禁止自定义的test选项
 ENV === 'production' && config.SPIDER && config.SPIDER.test && (delete config.SPIDER.test);

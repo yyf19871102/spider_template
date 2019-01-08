@@ -1,15 +1,18 @@
 /**
- * @auth yangyufei
- * @date 2018-12-12 17:34:56
+ * @author  yangyufei
+ * @date    2019-01-05 16:45:19
  * @desc
  */
 const fetcher = require('./fetcher');
-const fs = require('fs');
 
-fetcher.getAnnCount().then(data => {
-    console.log(JSON.stringify(data, null, 4))
-});
+// fetcher.getChannels().then(console.log);
 
-// fetcher.getNaviData(1, 1, 1000).then(data => {
-//     fs.writeFileSync('d://getNaviData.json', JSON.stringify(data, null, 4));
-// });
+// fetcher.getCities().then(console.log);
+
+// fetcher.getCompanyList(1, 43).then(data => console.log(JSON.stringify(data, null, 4)));
+
+// fetcher.getCompanyInfo(34863).then(console.log);
+
+// fetcher.getJobList('34863', 1).then(data => console.log(JSON.stringify(data, null, 4)));
+
+// fetcher.getJobInfo(5159139).then(console.log);

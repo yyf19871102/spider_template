@@ -10,11 +10,14 @@ const tools         = require('../common/tools');
 const SysConf       = require('../config');
 const {ERROR_OBJ}   = SysConf;
 const impl          = require('../spider/impl');
+const dispatcher    = require('./dispatcher');
+const outputManager = require('./output');
+const filterManager = require('./filter');
 
 class Task {
-	constructor(seed, context = {}) {
-		this.seed = seed;
-		this.context = context;
+	constructor(sid) {
+	    this.sid = sid;
+		this.context = {};
 
 		this.phaseList = [];
 	}
@@ -28,18 +31,52 @@ class Task {
 			tools.threw(ERROR_OBJ.BAD_CONFIG, 'impl中未配置makePhaseList方法！')
 		}
 
-		// 生成各个阶段
-		this.phaseList = await impl.makePhaseList(this.context);
+        // 初始化output和filter
+        this.context.outputManager = await outputManager.getOutputManager();
+        this.context.filterManager = await filterManager.get();
 
-		// 初始化第一个阶段的任务集合
-		this.phaseList.length > 0 && !await this.phaseList[0].isCreated() && await this.phaseList[0].insertTasks([this.seed]);
+		// 生成各个阶段
+		this.phaseList = await impl.makePhaseList(this.context, this.sid);
 	}
+
+    /**
+     * 是否需要seed
+     * @returns {Promise<boolean>}
+     */
+	async needSeed() {
+	    return this.phaseList.length > 0 && !await this.phaseList[0].isCreated()
+    }
+
+    /**
+     * 设置seed
+     * @param seed
+     * @returns {Promise<void>}
+     */
+	async setSeed(seed) {
+        await this.phaseList[0].insertTasks([seed]);
+    }
 
 	/**
 	 * 运行各个阶段的任务
 	 * @return {Promise.<void>}
 	 */
 	async run() {
+        // 取出seed，并设置各个阶段的打印输出keyword
+        if (impl.makeMacroTasks) {
+            let keyword = '';
+
+            let keywordName = SysConf.SPIDER.keywordOfSeed;
+            if (keywordName) {
+                let seed = await this.phaseList[0].getSeed();
+
+                keyword = seed.hasOwnProperty(keywordName) ? seed[keywordName] : JSON.stringify(seed);
+
+                this.phaseList.forEach(phase => {
+                    phase.setKeyword(keyword);
+                })
+            }
+        }
+
 		for (let no = 0 ; no < this.phaseList.length; no++) {
 			let phase = this.phaseList[no];
 			await phase.run();
@@ -50,14 +87,8 @@ class Task {
 			let output = this.context.outputManager[outputKey];
             await output.clear();
 		}
-	}
 
-	/**
-	 * 清除各个阶段中的（redis）中的任务数据
-	 * @return {Promise.<void>}
-	 */
-	async clear() {
-		for (let phase of this.phaseList) await phase.clear();
+        for (let phase of this.phaseList) await phase.clear();
 	}
 }
 
@@ -67,8 +98,8 @@ class Task {
  * @param context
  * @return {Promise.<Task>}
  */
-exports.get = async (seed, context) => {
-	let task = new Task(seed, context);
+exports.get = async sid => {
+	let task = new Task(sid);
 	await task.init();
 
 	return task;
