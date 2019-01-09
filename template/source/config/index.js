@@ -19,6 +19,13 @@ let config = {
 
 	MONITOR     : true, // 默认加入监控当中
 
+    /**
+     * 每个item应该是一个对象，该对象包含2个属性，开发者名字和开始开发的时间
+     * 例如：
+     * {name: '张三', startAt: '2019-01-09'}
+     */
+    AUTHOR      : [],
+
 	// 信源配置，每个信源对应一个接口/out文件
 	XINYUAN     : {
 		output  : {

@@ -4,7 +4,7 @@
  * @desc 爬虫相关配置
  */
 module.exports = {
-    outDir  : '/wltx/home/', // 输出文件根路径
+    outDir  : '/home/wltx/out/', // 输出文件根路径
 
 	fetch   : {
 		timeout     : 20000,
