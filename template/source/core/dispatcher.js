@@ -96,7 +96,6 @@ class Dispatcher {
 			logger.info(`【总进度 ${index + 1}/${len}】：${((index + 1) / len * 100).toFixed(2)}%；==> ${JSON.stringify(seed)}`);
 
 			let task = await taskManager.get(seed, this.context);
-			await task.init();
 			await task.run();
 			await task.clear();
 		}

@@ -54,7 +54,7 @@ class Output {
 	 */
 	validate(record) {
 		// 校验
-		if (this.validator(record)) return null;
+		if (!this.validator(record)) return null;
 
 		let result = {};
 		_.keys(this.xinyuan.schema.properties).forEach(key => {
