@@ -1,0 +1,7 @@
+{
+  "NAME"        : "{{project}}",
+  "SITE_NAME"   : "",
+  "AUTHOR"      : [
+    {"name": "{{author}}", "startAt": "{{dateTime}}"}
+  ]
+}

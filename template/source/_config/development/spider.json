@@ -1,0 +1,12 @@
+{
+  "outDir"        : "e://tmp/",
+  "run"           : {
+    "type"        : "once"
+  },
+  "test": [
+    {"code": "130", "name": "莆田"},
+    {"code": "53", "name": "盘锦"},
+    {"code": "175", "name": "濮阳"},
+    {"code": "170", "name": "平顶山"}
+  ]
+}
