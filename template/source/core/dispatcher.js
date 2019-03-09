@@ -1,18 +1,17 @@
 /**
- * @auth {{author}}
- * @date {{dateTime}}
+ * @author yangyufei
+ * @date 2019-03-08 15:24:55
  * @desc 任务分发器
  */
 const Promise   = require('bluebird');
 
-const SysConf   = require('../config');
-const redis     = require('../db_manager/redis').redis;
-const logger    = require('../common/logger');
+const {common, config: SysConf, logger, redisManager}   = require('../lib');
+const {redis}   = redisManager;
 const keyManager= require('./key_manager');
 const utils     = require('./utils');
 const impl      = require('../spider/impl');
 const taskManager= require('./task');
-const tools     = require('../common/tools');
+const {tools}   = common;
 const outputManager = require('./output');
 const filterManager = require('./filter');
 
@@ -39,11 +38,14 @@ class Dispatcher {
 	async init() {
 		// 默认生成macro任务
 		if (!impl.makeMacroTasks || typeof impl.makeMacroTasks !== 'function') {
+			logger.trace('dispatcher init：未发现自定义makeMacroTasks，使用系统默认MacroTasks');
 			impl.makeMacroTasks = defaultMakeMacroTasks;
 		}
 
 		// 初始化output和filter
+        logger.trace('dispatcher init：初始化output组件');
 		this.context.outputManager = await outputManager.getOutputManager();
+        logger.trace('dispatcher init：初始化filter组件');
 		this.context.filterManager = await filterManager.get();
 
 		// 保存key值
@@ -56,6 +58,7 @@ class Dispatcher {
 			// 如果获取不到城市数据，后面所有阶段都无法正常进行
 			while(true) {
 				try {
+				    logger.trace('dispatcher生成macroTasks');
 					taskList = await impl.makeMacroTasks(this.context);
 					break;
 				} catch (err) {
@@ -114,6 +117,5 @@ class Dispatcher {
  */
 exports.get = async () => {
 	let dispatcher = new Dispatcher();
-	await dispatcher.init();
 	return dispatcher;
 };

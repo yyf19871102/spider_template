@@ -3,9 +3,9 @@
  * @date {{dateTime}}
  * @desc
  */
-const redis     = require('../db_manager/redis').redis;
+const {config: SysConf, redisManager, logger}   = require('../lib');
+const {redis}   = redisManager;
 const utils     = require('./utils');
-const SysConf   = require('../config');
 
 class AbstractFilter {
 	constructor(filterKeyName) {
@@ -48,6 +48,7 @@ class AbstractFilter {
 class SimpleFilter extends AbstractFilter{
 	constructor(filterName) {
 		super(filterName);
+		logger.trace('filter init：使用简单过滤器');
 	}
 
 	async exists(key, save = true) {
@@ -67,6 +68,7 @@ class ExpireFilter extends AbstractFilter {
 	constructor(filterName, updateTime = 3 * 30 * 24 * 60 * 60 * 1000) {
 		super(filterName);
 
+        logger.trace(`filter init ${filterName}：使用超时过滤器，超时期限${updateTime}秒`);
 		this.updateTime = updateTime;
 	}
 

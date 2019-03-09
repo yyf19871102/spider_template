@@ -4,7 +4,7 @@
  * @desc 爬虫相关配置
  */
 module.exports = {
-	outDir  : 'd://tmp/', // 输出文件根路径
+	outDir  : 'e://tmp/', // 输出文件根路径
 
 	/**
 	 * 默认的输出文件夹为：outDir/SysConf.NAME；
@@ -24,11 +24,15 @@ module.exports = {
 		retry       : 5, // 任务错误重试次数
 	},
 
-	// 测试选项，自定义；在production环境中该选项不起作用；
+	// 测试选项，自定义；
 	test    : {
-		enable  : true,
-		annNum  : 1,
-		endPage : 2,
+		channels: [
+		    {
+		        id: 'travels',
+                startPage: 2,
+                endPage: 4,
+            },
+        ]
 	},
 
     /**

@@ -5,12 +5,10 @@
  */
 const Promise       = require('bluebird');
 
-const SysConf       = require('../config');
-const SPIDER_CONF   = SysConf.SPIDER;
-const tools         = require('../common/tools');
-const redis         = require('../db_manager/redis').redis;
-const logger        = require('../common/logger');
-const dataFormat    = require('../common/date_format');
+const {common, config: SysConf, logger, redisManager}   = require('../lib');
+const {spider: SPIDER_CONF} = SysConf;
+const {tools, dateFormat}   = common;
+const {redis}       = redisManager;
 
 /**
  * 获取一个代理IP源
@@ -100,7 +98,8 @@ exports.requestUrl = async (config, retryTimes = SPIDER_CONF.fetch.retry, checkS
 				lastErrMsg = '请求uri的校验不通过！';
 			}
 		} catch (err) {
-		    // console.error(err);
+		    logger.error('requestUrl 错误！');
+		    logger.error(err);
 			retryTimes <= 0 && await Promise.delay(50);
 			lastErrMsg = err.message;
 			err.data = requestOption;

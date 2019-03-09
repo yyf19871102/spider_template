@@ -5,9 +5,9 @@
  */
 const _         = require('lodash');
 
-const redis     = require('../db_manager/redis').redis;
-const SysConf   = require('../config');
 const utils     = require('./utils');
+const {redisManager}   = require('../lib');
+const {redis}   = redisManager;
 
 class KeyManager {
 	constructor() {

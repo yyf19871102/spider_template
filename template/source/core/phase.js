@@ -5,12 +5,11 @@
  */
 const Promise       = require('bluebird');
 
-const SysConf       = require('../config');
+const {common, config: SysConf, logger, redisManager}   = require('../lib');
 const {TASK_STATUS} = SysConf;
-const redis         = require('../db_manager/redis').redis;
-const {Progress}    = require('../common/tools');
+const {redis}       = redisManager;
+const {Progress}    = common.tools;
 const keyManager    = require('./key_manager');
-const logger        = require('../common/logger');
 const utils         = require('./utils');
 
 class Phase {
@@ -19,7 +18,7 @@ class Phase {
 		this.phaseName = phaseName;
 		this.maxErrCount = maxErrCount || 4; // 最大重试次数
 		this.handler = handler; // 每个任务的处理方法
-		this.concurrency = concurrency || SysConf.SPIDER.task.concurrency; // 并发数量
+		this.concurrency = concurrency || SysConf.spider.task.concurrency; // 并发数量
 		this.progress = null; // 进度显示封装
 		this.mode = mode || 'run';
 
@@ -30,7 +29,7 @@ class Phase {
 			ERROR_SET   : `${prefix}:error`,
 			FAILED_SET  : `${prefix}:failed`,
 			SUCCESS_SET : `${prefix}:successed`,
-			OVER_FLAG   : `${prefix}:over`,
+			OVER_FLAG   : `${prefix}:over`, // 暂时不用
 		};
 	}
 
@@ -44,6 +43,7 @@ class Phase {
 
 		// 判断任务是否已经执行完毕
 		if (await redis.exists(this.KEYS.OVER_FLAG)) {
+			logger.trace(`${this.phaseName}：该阶段已经完成~`);
 			return;
 		}
 
@@ -54,6 +54,7 @@ class Phase {
 
 		// 校验是否有丢失的任务
 		if (size > successCount + failCount) {
+		    logger.trace(`${this.phaseName}：校验并补充丢失的任务`);
 			for (let index = 0; index < size; index ++) {
 				!await redis.sismember(this.KEYS.SUCCESS_SET, index) && !await redis.sismember(this.KEYS.FAILED_SET, index) && await redis.sadd(this.KEYS.READY_SET, index);
 			}
@@ -106,6 +107,7 @@ class Phase {
 
 			let task = await redis.lindex(this.KEYS.DATA_LIST, taskIndex);
 
+			logger.trace(`执行任务：${task}`);
 			return {index: taskIndex, task: JSON.parse(task)}
 		}
 	}
@@ -116,11 +118,12 @@ class Phase {
 	 * @param success
 	 * @return {Promise<void>}
 	 */
-	async completeOneTask(index, success = true) {
+	async completeOneTask(index, task, success = true) {
 		let key = success ? this.KEYS.SUCCESS_SET : this.KEYS.FAILED_SET;
 		await redis.sadd(key, index);
 		await redis.zrem(this.KEYS.ERROR_SET, index);
 
+		logger.trace(`完成任务：${JSON.stringify(task)}`);
 		this.progress.success();
 	}
 
@@ -141,7 +144,7 @@ class Phase {
 	 * @param index
 	 * @return {Promise<void>}
 	 */
-	async setError(index) {
+	async setError(index, task) {
 		let rank = await redis.zrank(this.KEYS.ERROR_SET, index);
 
 		let errCount;
@@ -157,6 +160,7 @@ class Phase {
 
 		// 如果错误次数过多，则将该任务放入fail队列中，并从err队列中删除
 		if (errCount >= this.maxErrCount) {
+		    logger.warn(`${this.phaseName}：record执行失败${JSON.stringify(task)}`);
 			await redis.sadd(this.KEYS.FAILED_SET, index);
 			await redis.zrem(this.KEYS.ERROR_SET, index);
 			this.progress.fail();
@@ -179,10 +183,11 @@ class Phase {
 			try {
 				await this.handler(task);
 
-				await this.completeOneTask(index);
+				await this.completeOneTask(index, task);
 			} catch (err) {
-				console.error(err);
-				await this.setError(index);
+			    logger.error(`${this.phaseName} record执行错误：${JSON.stringify(task)}`);
+				logger.error(err);
+				await this.setError(index, task);
 			}
 		}
 	}
@@ -212,8 +217,9 @@ class Phase {
             }
 
 			// 生成进度信息
-			this.progress = new Progress(total, successCount, failCount);
+			this.progress = new Progress(total, successCount, failCount, undefined, logger);
 
+            logger.trace(`${this.phaseName}：${this.concurrency}个并发`);
 			let ps = [];
 			for (let i = 0 ; i < this.concurrency; i++) {
 				ps.push(this._microTask());

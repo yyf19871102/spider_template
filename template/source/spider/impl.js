@@ -7,77 +7,57 @@ const moment        = require('moment');
 
 const phaseManager  = require('../core/phase');
 const fetcher       = require('./fetcher');
-const SysConf       = require('../config');
+const {config: SysConf} = require('../lib');
 
-const NAVI_PAGE_SIZE= 1000;
+exports.makeMacroTasks = async () => {
+    return SysConf.spider.test.channels;
+};
 
 exports.makePhaseList = async (context) => {
-	let annFilter = context.filterManager['annFilter'];
+	let autoFilter = context.filterManager['autoFilter'];
 	let output = context.outputManager['output'];
 
 	let phaseList = [];
 
-	// 初始化阶段，主要获取各期都有多少数据
+	// 初始化阶段，生成请求参数
 	let phaseInit = await phaseManager.getOnePhase('init', 1);
 
 	// 生产各期导航页
-	let phaseMakeNaviParams = await phaseManager.getOnePhase('makeNaviParams', 2);
+	let phaseGetNaviList = await phaseManager.getOnePhase('getNaviList', 2);
 
 	// 抓取导航页数据
-	let phaseGetNavi = await phaseManager.getOnePhase('getNavi', 2);
+	let phaseGetPage = await phaseManager.getOnePhase('getPageInfo', 3);
 
-	phaseInit.setHandler(async () => {
-        let params = [];
+	phaseInit.setHandler(async channel => {
+        let paramsList = [];
 
-        let testOpt = SysConf.SPIDER.test;
-        if (testOpt && testOpt.enable === true) {
-            await annFilter.exists(testOpt.annNum + '');
-            params.push({ann: testOpt.annNum});
-        } else {
-            let {maxNum, annList} = await fetcher.getAnnCount();
-
-            if (SysConf.SPIDER.run.type === 'cron') {
-                for (let ann of annList) {
-                    !await annFilter.exists(ann.annNum + '') && params.push({ann: ann.annNum});
-                }
-            } else if (SysConf.SPIDER.run.type === 'once') {
-                for (let ann = 1; ann <= maxNum; ann ++) {
-                    params.push({ann});
-                }
-            } else {
-                logger.warn(`错误的run type：${SysConf.SPIDER.run.type}`);
-            }
+        for (let page = channel.startPage; page <= channel.endPage; page++) {
+            paramsList.push({channel: channel.id, page});
         }
 
-		await phaseMakeNaviParams.insertTasks(params);
+		await phaseGetNaviList.insertTasks(paramsList);
 	});
 
-	phaseMakeNaviParams.setHandler(async annObj => {
-		let {total, rows} = await fetcher.getNaviData(annObj.ann, 1, NAVI_PAGE_SIZE).catch(console.error);
+    phaseGetNaviList.setHandler(async param => {
+		let naviList = await fetcher.getNaviData(param.channel, param.page);
 
-		await output.write(rows);
+        let pageList = [];
+        for (let item of naviList) {
+            !await autoFilter.exists(item.uri) && pageList.push(item);
+        }
 
-		let endPage = Math.ceil(total / NAVI_PAGE_SIZE);
-		let pageList = [];
-
-		let testOpt = SysConf.SPIDER.test;
-		testOpt && testOpt.enable && (endPage = testOpt.endPage);
-		for (let page = 2; page <= endPage; page ++) {
-			pageList.push({ann: annObj.ann, page});
-		}
-
-		await phaseGetNavi.insertTasks(pageList);
+        await phaseGetPage.insertTasks(pageList);
 	});
 
-	phaseGetNavi.setHandler(async annObj => {
-		let {rows} = await fetcher.getNaviData(annObj.ann, annObj.page, NAVI_PAGE_SIZE);
+	phaseGetPage.setHandler(async pageObj => {
+		let page = await fetcher.getPageData('https:' + pageObj.uri, pageObj.view);
 
-		await output.write(rows);
+		await output.write([page]);
 	});
 
 	return [
 		phaseInit,
-		phaseMakeNaviParams,
-		phaseGetNavi
+		phaseGetNaviList,
+		phaseGetPage
 	]
 };

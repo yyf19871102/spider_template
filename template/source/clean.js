@@ -10,7 +10,7 @@ const inquirer  = require('inquirer');
 
 const filterManager = require('./core/filter');
 const keyManager    = require('./core/key_manager');
-const SysConf       = require('./config');
+const {config: SysConf}   = require('./lib');
 
 const error     = chalk.bold.dim.red;
 const warning   = chalk.keyword('orange');

@@ -14,17 +14,16 @@ const moment    = require('moment');
 const Ajv       = require('ajv');
 const ajv       = new Ajv({useDefaults: true, removeAdditional: true});
 
-const SysConf   = require('../config');
-const dateFormat= require('../common/date_format');
-const tools     = require('../common/tools');
-const redis     = require('../db_manager/redis').redis;
+const {common, config: SysConf, logger, redisManager}   = require('../lib');
+const {dateFormat, tools} = common;
+const {redis}   = redisManager;
 const utils     = require('./utils');
 const keyManager= require('./key_manager');
-const logger    = require('../common/logger');
 
 class Output {
-	constructor(xinyuan) {
+	constructor(xinyuan, outputName) {
 		this.xinyuan = xinyuan;
+		this.outputName = outputName;
 		this.validator  = ajv.compile(xinyuan.schema);
 
 		let prefix =  utils.makeNameSpace();
@@ -41,10 +40,12 @@ class Output {
 		await keyManager.saveKeyObject(this.KEYS);
 
 		// out文件输出目录
-		this.destDir = path.join(SysConf.SPIDER.outDir, SysConf.SPIDER.dirName || SysConf.NAME);
+		this.destDir = path.join(SysConf.spider.outDir, SysConf.spider.dirName || SysConf.NAME);
 
 		// 是否生成子目录
 		this.xinyuan.subDir && (this.destDir = path.join(this.destDir, this.xinyuan.subDir));
+
+		logger.trace(`output输出组件${this.outputName}，输出目录 ${this.destDir}，输出文件名前缀 ${this.xinyuan.key}`);
 	}
 
 	/**
@@ -54,7 +55,11 @@ class Output {
 	 */
 	validate(record) {
 		// 校验
-		if (!this.validator(record)) return null;
+		if (!this.validator(record)) {
+		    logger.warn(`out输出校验失败：${JSON.stringify(record)}`);
+		    logger.warn(JSON.stringify(this.validator.errors));
+		    return null;
+        }
 
 		let result = {};
 		_.keys(this.xinyuan.schema.properties).forEach(key => {
@@ -117,7 +122,9 @@ class Output {
 		}
 
 
-		await redis.scard(this.KEYS.OUTPUT) >= SysConf.OUT_FILE_SIZE && await this.writeFile();
+		if (await redis.scard(this.KEYS.OUTPUT) >= SysConf.OUT_FILE_SIZE) {
+		    await this.writeFile();
+        }
 	}
 
 	/**
@@ -125,6 +132,7 @@ class Output {
 	 * @return {Promise.<void>}
 	 */
 	async clear() {
+	    logger.trace(`output（${this.xinyuan}）清理残留数据`);
 		await this.writeFile();
 	}
 }
@@ -142,7 +150,7 @@ exports.getOutputManager = async () => {
 	for (let xinyuanKey in SysConf.XINYUAN) {
 		let xinyuan = SysConf.XINYUAN[xinyuanKey];
 
-		let output = new Output(xinyuan);
+		let output = new Output(xinyuan, xinyuanKey);
 		await output.init();
 		outputManager[xinyuanKey] = output;
 	}

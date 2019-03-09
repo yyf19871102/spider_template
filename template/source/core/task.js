@@ -5,9 +5,8 @@
  */
 const _             = require('lodash');
 
-const logger        = require('../common/logger');
-const tools         = require('../common/tools');
-const SysConf       = require('../config');
+const {common, config: SysConf, logger}   = require('../lib');
+const {tools}       = common;
 const {ERROR_OBJ}   = SysConf;
 const impl          = require('../spider/impl');
 

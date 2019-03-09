@@ -1,70 +1,76 @@
 /**
  * @author yangyufei
- * @date 2018-12-15 10:22:16
+ * @date 2019-03-07 15:46:49
  * @desc
  */
 const cheerio           = require('cheerio');
+const iconv             = require('iconv-lite');
+const moment            = require('moment');
 
 const {requestUrl}      = require('../core/utils');
-const SysConf           = require('../config');
-const {timeout, retry}  = SysConf.SPIDER.fetch;
 
 /**
- * 获取一期有多少数据
- * @returns {Promise<number>}
+ * 读取导航页
+ * @param channelId
+ * @param page
+ * @returns {Promise<Array>}
  */
-exports.getAnnCount = async () => {
-	let reqConf = {
-		uri     : 'http://sbgg.saic.gov.cn:9080/tmann/annInfoView/homePage.html',
-		method  : 'GET',
-		useProxy: true,
-		timeout,
-		transform: res => cheerio.load(res),
-	};
+exports.getNaviData = async (channelId, page) => {
+    let reqConf = {
+        uri     : `https://www.autohome.com.cn/${channelId}/${page}/#liststart`,
+        encoding: null,
+        method  : 'GET',
+        useProxy: false,
+        transform: res => cheerio.load(iconv.decode(res,'gbk'))
+    };
 
-	let $ = await requestUrl(reqConf, retry, $ => $('.odd_bg').length > 0);
+    let $ = await requestUrl(reqConf, null, $ => $('.article > li').length > 0);
+    
+    let naviList = [];
+    $('.article > li').each(function () {
+        if ($(this).find('a').length > 0) {
+            let uri = $(this).find('a').attr('href');
+            let view = $(this).find('a .fn-right > em:first-child').text();
+            if (/万/g.test(view)) {
+                view = view.replace('万');
+                view = parseFloat(view) * 10000;
+            } else {
+                view = parseFloat(view);
+            }
 
-	let annList = [];
+            naviList.push({uri, view});
+        }
+    });
 
-	$('.odd_bg').each(function () {
-		let annNum = $(this).find('td:first-child').text().replace(/\r|\n|\s|第|期/g, '');
-		let annDateArr = $(this).find('td:nth-child(2)').text().replace(/\r|\n|\s|初步审定公告日期：/g, '').split(/年|月|日/g);
-
-		let annDate = new Date(parseInt(annDateArr[0]), parseInt(annDateArr[1] - 1), parseInt(annDateArr[2]));
-
-		annList.push({annNum, annDate});
-	});
-
-	let str = $('.odd_bg:nth-child(2) > td:first-child').text().replace(/\r|\n|\s|第|期/g, '');
-
-	return {maxNum: parseInt(str), annList};
+    return naviList;
 };
 
 /**
- * 读取指定导航页的数据
- * @param ann
- * @param page
- * @returns {Promise<*|void>}
+ * 读取详情页
+ * @param uri
+ * @param view
+ * @returns {Promise<{title: jQuery, author: jQuery, postTime: jQuery, view: *, content: jQuery, uri: *, createdAt: string}>}
  */
-exports.getNaviData = async (ann, page, rows) => {
-	let reqConf = {
-		uri     : 'http://sbgg.saic.gov.cn:9080/tmann/annInfoView/annSearchDG.html',
-		method  : 'POST',
-		useProxy: true,
-		timeout,
-		form    : {
-			page,
-			rows,
-			annNum: ann
-		},
-		json    : true,
-	};
+exports.getPageData = async (uri, view) => {
+    let reqConf = {
+        uri,
+        encoding: null,
+        method  : 'GET',
+        useProxy: false,
+        transform: res => cheerio.load(iconv.decode(res,'gbk'))
+    };
 
-	let data = await requestUrl(reqConf, 5, res => res.hasOwnProperty('rows'));
+    let $ = await requestUrl(reqConf, null, $ => $('#articlewrap').length > 0);
 
-	data.rows.forEach(record => {
-	    record.uri = `http://sbgg.saic.gov.cn:9080/tmann/annInfoView/annSearch.html?annNum=${ann}`;
-    });
+    let data = {
+        title   : $('#articlewrap h1').text().replace(/\r|\n|(^\s*)|(\s*$)/g, ''),
+        author  : $('.article-info a.name').text().replace(/\r|\n|(^\s*)|(\s*$)/g, ''),
+        postTime: $('.article-info .time').text().replace(/\r|\n|(^\s*)|(\s*$)/g, ''),
+        view,
+        content : $('#articleContent').text().replace(/\r|\n|(^\s*)|(\s*$)/g, ''),
+        uri,
+        createdAt: moment().format('YYYY-MM-DD HH:mm:ss'),
+    };
 
-	return data;
+    return data;
 };
