@@ -72,5 +72,7 @@ exports.getPageData = async (uri, view) => {
         createdAt: moment().format('YYYY-MM-DD HH:mm:ss'),
     };
 
+    if (data.author === '周楚然') throw new Error(`模拟错误：${data.uri}`);
+
     return data;
 };

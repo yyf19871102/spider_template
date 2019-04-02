@@ -13,16 +13,17 @@ const keyManager    = require('./key_manager');
 const utils         = require('./utils');
 
 class Phase {
-	constructor(phaseName, no, handler, maxErrCount, concurrency, mode) {
-		this.no = no || 1; // 该phase的索引，仅仅用于标识
-		this.phaseName = phaseName;
-		this.maxErrCount = maxErrCount || 4; // 最大重试次数
-		this.handler = handler; // 每个任务的处理方法
-		this.concurrency = concurrency || SysConf.spider.task.concurrency; // 并发数量
+	constructor(config) {
+		this.no = config.no || 1; // 该phase的索引，仅仅用于标识
+		this.phaseName = config.phaseName;
+		this.maxErrCount = config.maxErrCount || 4; // 最大重试次数
+		this.handler = config.handler; // 每个任务的处理方法
+		this.concurrency = config.concurrency || SysConf.spider.task.concurrency; // 并发数量
 		this.progress = null; // 进度显示封装
-		this.mode = mode || 'run';
+		this.mode = config.mode || 'run';
+		this.fth = config.fth;
 
-		let prefix = `${utils.makeNameSpace()}:phase${this.no}@${phaseName}`;
+		let prefix = `${utils.makeNameSpace()}:phase${this.no}@${config.phaseName}`;
 		this.KEYS = {
 			DATA_LIST   : `${prefix}:data`,
 			READY_SET   : `${prefix}:ready`,
@@ -161,7 +162,8 @@ class Phase {
 		// 如果错误次数过多，则将该任务放入fail队列中，并从err队列中删除
 		if (errCount >= this.maxErrCount) {
 		    logger.warn(`${this.phaseName}：record执行失败${JSON.stringify(task)}`);
-			await redis.sadd(this.KEYS.FAILED_SET, index);
+            this.fth && this.fth.saveTask(this.phaseName, task);
+            await redis.sadd(this.KEYS.FAILED_SET, index);
 			await redis.zrem(this.KEYS.ERROR_SET, index);
 			this.progress.fail();
 		} else {

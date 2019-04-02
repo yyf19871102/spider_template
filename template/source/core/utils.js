@@ -63,6 +63,29 @@ exports.getOneProxy = async () => {
 };
 
 /**
+ * 获取一个代理IP
+ * @returns {Promise<string>}
+ */
+exports.getOneProxy = async () => {
+    let reqConf = {
+        uri     : `http://${SysConf.spider.proxyServer}/proxy/getOne`,
+        method  : 'GET',
+        qs      : {signature: SysConf.spider.signature},
+        json    : true,
+        timeout : 1000,
+    };
+
+    let proxyObj = await tools.timeoutRequest(reqConf);
+
+    let proxy = `${proxyObj.protocol}://`;
+    proxyObj.username && proxyObj.password && (proxyObj += `${proxyObj.username}:${proxyObj.password}@`);
+    proxyObj += proxyObj.host;
+    proxyObj.port && (proxy += `:${proxyObj.port}`);
+
+    return proxy;
+};
+
+/**
  * 请求url辅助方法；如果retryTimes小于1，则表示无限重试！有可能导致死循环，慎用！！
  * @param config
  * @param retryTimes

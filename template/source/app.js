@@ -7,7 +7,7 @@ const schedule      = require('node-schedule');
 const Promise       = require('bluebird');
 
 const dispatcher    = require('./core/dispatcher');
-const {config: SysConf, logger}   = require('./lib');
+const {config: SysConf, logger, redisManager} = require('./lib');
 
 const run = async () => {
 	let spider = await dispatcher.get();

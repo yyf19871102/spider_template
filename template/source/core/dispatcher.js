@@ -4,10 +4,12 @@
  * @desc 任务分发器
  */
 const Promise   = require('bluebird');
+const moment    = require('moment');
+const uuid      = require('uuid/v4');
+const failedTasksHandler = require('@nodejs/spider-faith');
 
-const {common, config: SysConf, logger, redisManager}   = require('../lib');
+const {common, config: SysConf, logger, redisManager, keyManager}   = require('../lib');
 const {redis}   = redisManager;
-const keyManager= require('./key_manager');
 const utils     = require('./utils');
 const impl      = require('../spider/impl');
 const taskManager= require('./task');
@@ -26,6 +28,7 @@ class Dispatcher {
 		};
 
 		this.context = {
+			jobId           : `${moment().format('YYYYMMDDHHmmss')}@${uuid()}`,
 			filterManager   : {},
 			outputManager   : {}
 		};
@@ -42,6 +45,19 @@ class Dispatcher {
 			impl.makeMacroTasks = defaultMakeMacroTasks;
 		}
 
+		let fthConf = {
+            jobId   : this.context.jobId,
+            spiderKey: SysConf.KEY,
+        };
+		if (SysConf.spider.run.type === 'fix') {
+            !SysConf.spider.run.parentId && logger.warn(`fix模式下未指定parentId，jobId：${fthConf.jobId}`);
+
+            fthConf.parentId = SysConf.spider.run.parentId;
+        }
+
+		this.context.fth = failedTasksHandler.getInstance(fthConf);
+		this.context.fth.startJob();
+
 		// 初始化output和filter
         logger.trace('dispatcher init：初始化output组件');
 		this.context.outputManager = await outputManager.getOutputManager();
@@ -55,26 +71,43 @@ class Dispatcher {
 		if(await redis.llen(this.KEYS.DATA_LIST) <= 0) {
 			let taskList;
 
-			// 如果获取不到城市数据，后面所有阶段都无法正常进行
-			while(true) {
-				try {
-				    logger.trace('dispatcher生成macroTasks');
-					taskList = await impl.makeMacroTasks(this.context);
-					break;
-				} catch (err) {
-					logger.error(err);
-					logger.warn('dispatcher init阶段无法获取macroTasks，5s后重试...');
-					await Promise.delay(5000);
-				}
-			}
+            // 如果获取不到batch数据，后面所有阶段都无法正常进行
+            for (let i = 0 ; i < SysConf.spider.task.retry; i++) {
+                try {
+                    logger.trace('dispatcher生成macroTasks');
+                    taskList = await impl.makeMacroTasks(this.context);
+                    break;
+                } catch (err) {
+                    logger.error(err);
+                    logger.warn('dispatcher init阶段无法获取macroTasks，5s后重试...');
+                    await Promise.delay(5000);
+                }
+            }
+			// while(true) {
+			// 	try {
+			// 	    logger.trace('dispatcher生成macroTasks');
+			// 		taskList = await impl.makeMacroTasks(this.context);
+			// 		break;
+			// 	} catch (err) {
+			// 		logger.error(err);
+			// 		logger.warn('dispatcher init阶段无法获取macroTasks，5s后重试...');
+			// 		await Promise.delay(5000);
+			// 	}
+			// }
 
-			taskList = taskList.map(record => JSON.stringify(record));
+            if (taskList) {
+                taskList = taskList.map(record => JSON.stringify(record));
 
-			await redis.lpush(this.KEYS.DATA_LIST, taskList);
+                await redis.lpush(this.KEYS.DATA_LIST, taskList);
+            } else {
+			    this.context.fth.saveTask(`${utils.makeNameSpace()}:phase0@makeMacroTasks`, {msg: 'Bad macroTasks'});
+            }
 		}
 
 		// 设置执行Job任务的index
 		!await redis.exists(this.KEYS.INDEX) && await redis.set(this.KEYS.INDEX, 0);
+
+        impl.hasOwnProperty('afterInit') && typeof impl.afterInit === 'function' && await impl.afterInit(this.context);
 	}
 
 	/**
@@ -100,14 +133,23 @@ class Dispatcher {
 
 			let task = await taskManager.get(seed, this.context);
 			await task.run();
-			await task.clear();
+
+			if (!SysConf.spider.hasOwnProperty('doNotClear') || SysConf.spider.hasOwnProperty('doNotClear') && SysConf.spider === false) {
+                await task.clear();
+            }
 		}
 
 		logger.info(`${SysConf.NAME}抓取结束。`);
 	}
 
 	async clear() {
-		await keyManager.clearAllKeys();
+	    impl.hasOwnProperty('preClear') && typeof impl.preClear === 'function' && await impl.preClear(this.context);
+
+        if (!SysConf.spider.hasOwnProperty('doNotClear') || SysConf.spider.hasOwnProperty('doNotClear') && SysConf.spider.doNotClear === false) {
+            await keyManager.clearAllKeys();
+        }
+
+        this.context.fth.endJob();
 	}
 }
 

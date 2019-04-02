@@ -7,6 +7,8 @@ module.exports = {
     NAME        : '{{project}}', // 工程名同
     SITE_NAME   : '', // 主站中文名称
 
+    KEY         : 'autohome', // 信源关键字
+
     /**
      * 每个item应该是一个对象，该对象包含2个属性，开发者名字和开始开发的时间
      * 例如：

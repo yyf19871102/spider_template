@@ -11,8 +11,9 @@
   "bin": "./clean.js",
   "author": "{{author}}",
   "dependencies": {
-    "@nodejs/spider-common": "^0.2.1",
-    "@nodejs/spider-logger": "^0.1.0",
+    "@nodejs/spider-common": "^0.3.3",
+    "@nodejs/spider-faith": "^0.2.1",
+    "@nodejs/spider-logger": "^0.1.2",
     "ajv": "^6.10.0",
     "bluebird": "^3.5.3",
     "chai": "^4.2.0",
@@ -28,7 +29,8 @@
     "node-schedule": "^1.3.1",
     "nodemailer": "^4.6.8",
     "request": "^2.88.0",
-    "request-promise": "^4.2.2"
+    "request-promise": "^4.2.2",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "mocha": "^5.2.0"

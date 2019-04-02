@@ -30,6 +30,8 @@ class Task {
 		// 生成各个阶段
 		this.phaseList = await impl.makePhaseList(this.context);
 
+		this.phaseList.forEach(phase => {phase.fth = this.context.fth});
+
 		// 初始化第一个阶段的任务集合
 		this.phaseList.length > 0 && !await this.phaseList[0].isCreated() && await this.phaseList[0].insertTasks([this.seed]);
 	}

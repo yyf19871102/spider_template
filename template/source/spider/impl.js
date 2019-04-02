@@ -20,13 +20,13 @@ exports.makePhaseList = async (context) => {
 	let phaseList = [];
 
 	// 初始化阶段，生成请求参数
-	let phaseInit = await phaseManager.getOnePhase('init', 1);
+	let phaseInit = await phaseManager.getOnePhase({phaseName: 'init', no: 1});
 
 	// 生产各期导航页
-	let phaseGetNaviList = await phaseManager.getOnePhase('getNaviList', 2);
+	let phaseGetNaviList = await phaseManager.getOnePhase({phaseName: 'getNaviList', no: 2});
 
 	// 抓取导航页数据
-	let phaseGetPage = await phaseManager.getOnePhase('getPageInfo', 3);
+	let phaseGetPage = await phaseManager.getOnePhase({phaseName: 'getPageInfo', no: 3});
 
 	phaseInit.setHandler(async channel => {
         let paramsList = [];

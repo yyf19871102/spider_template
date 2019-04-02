@@ -36,12 +36,23 @@ module.exports = {
 	},
 
     /**
-     * 运行方式，共3种，分别是
+     * 运行方式，共4种，分别是
      * once     ：运行一次，用于抓取历史累积数据；
      * forever  ：一直运行，用于抓取无法估计每轮更新时间的任务；
      * cron     ：定时任务，一般是每日更新
      */
 	run     : {
-		type: 'once', // 运行方式，共3种：once
-	}
+		type: 'once', // 运行方式
+
+        // cron: '0 0 0 * * *', // cron模式下定时设置
+
+        // parentId: '20190325@15gwo...', // fix模式下的父任务的jobId；fix模式下该选项必填；
+	},
+
+	proxyServer: {
+	    host    : '172.18.67.26:9101', // 代理IP服务器地址
+        signature: 'CMCC10086', // 访问密码
+    },
+
+    doNotClear: false,
 };

@@ -16,3 +16,5 @@ lib.logger = logLoader.getLogger(lib.config.log);
 lib.redisManager = common.getRedisManager(lib.config.redis, lib.logger);
 
 lib.common = common;
+
+lib.keyManager = common.keyManager.getInstance(lib.redisManager.redis, lib.config.NAME);

@@ -7,4 +7,8 @@ module.exports = {
     console : {
         level: "all" // 控制台输出所有日志
     },
+    file: {
+        level: 'all',
+        appName: '{{project}}'
+    }
 };
